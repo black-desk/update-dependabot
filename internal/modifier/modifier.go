@@ -107,7 +107,7 @@ func (m *Modifier) modifyUpdates(updatesNode *yaml.Node, updates []types.Update)
 
 		if !found {
 			log.Debugw("Remove", "update", update)
-			updatesNode.Content = append(updatesNode.Content[:i], updateNode.Content[i+1:]...)
+			updatesNode.Content = append(updatesNode.Content[:i], updatesNode.Content[i+1:]...)
 		}
 	}
 
