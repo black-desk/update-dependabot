@@ -28,6 +28,7 @@ func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
 			if err != nil {
 				return
 			}
+			break
 		}
 	}
 
@@ -35,24 +36,36 @@ func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
 }
 
 func (m *Modifier) initCfg(cfg *yaml.Node, updates []types.Update) (err error) {
-	if cfg == nil || len(cfg.Content) == 0 {
+	found := false
 
-		if updates == nil || len(updates) == 0 {
-			return
+	if cfg != nil && len(cfg.Content) == 0 {
+		for i := range cfg.Content[0].Content {
+			if cfg.Content[0].Content[i].Value == "updates" {
+				found = true
+			}
 		}
+	}
 
-		err = yaml.Unmarshal([]byte(`
+	if found {
+		return
+	}
+
+	if updates == nil || len(updates) == 0 {
+		return
+	}
+
+	err = yaml.Unmarshal([]byte(`
                         version: 2
                         updates: []
                 `), cfg)
 
-		if err != nil {
-			err = Trace(err)
-			return
-		}
-
-		cfg.Content[0].Content[3].Style = yaml.Style(yaml.FoldedStyle)
+	if err != nil {
+		err = Trace(err)
+		return
 	}
+
+	cfg.Content[0].Content[3].Style = yaml.Style(yaml.FoldedStyle)
+
 	return
 }
 
