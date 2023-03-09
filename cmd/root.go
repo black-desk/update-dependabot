@@ -52,7 +52,7 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 	}
 
 	dependabotCfgFileContent, err := os.ReadFile(opt.File)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return Trace(err, "Failed to read %s", opt.File)
 	}
 
