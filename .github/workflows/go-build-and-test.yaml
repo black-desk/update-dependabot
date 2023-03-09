@@ -1,0 +1,16 @@
+name: Build and test go package
+
+on: [pull_request]
+
+jobs:
+  build-go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: stable
+
+      - name: Build & test
+        run: go build -v ./... && go test -v ./...
