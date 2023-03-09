@@ -38,7 +38,7 @@ func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
 func (m *Modifier) initCfg(cfg *yaml.Node, updates []types.Update) (err error) {
 	found := false
 
-	if cfg != nil && len(cfg.Content) == 0 {
+	if cfg != nil && len(cfg.Content) != 0 {
 		for i := range cfg.Content[0].Content {
 			if cfg.Content[0].Content[i].Value == "updates" {
 				found = true
