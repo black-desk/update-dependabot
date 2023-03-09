@@ -119,7 +119,7 @@ func (s *Scanner) scanGoModules(root string) (updates []types.Update, err error)
 		name := f.Name()
 		if name == "go.mod" {
 			updates = append(updates, types.Update{
-				Directory:        "/" + strings.TrimPrefix(filepath.Dir(path), root),
+				Directory:        filepath.Clean("/" + strings.TrimPrefix(filepath.Dir(path), root)),
 				PackageEcosystem: types.PackageEcosystemGoModules,
 			})
 		}
