@@ -11,8 +11,8 @@ import (
 
 	. "github.com/black-desk/lib/go/errwrap"
 	"github.com/black-desk/update-dependabot/internal/logger"
-        "github.com/black-desk/update-dependabot/internal/modifier"
-        "github.com/black-desk/update-dependabot/internal/scanner"
+	"github.com/black-desk/update-dependabot/internal/modifier"
+	"github.com/black-desk/update-dependabot/internal/scanner"
 	"github.com/black-desk/update-dependabot/internal/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -56,13 +56,13 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 		return Trace(err, "Failed to read %s", opt.File)
 	}
 
-        scanner := scanner.New()
-        updates, err := scanner.Scan(opt.Dir)
-        if err != nil {
-                return Trace(err, "Failed to scan %s", opt.Dir)
-        }
+	scanner := scanner.New()
+	updates, err := scanner.Scan(opt.Dir)
+	if err != nil {
+		return Trace(err, "Failed to scan %s", opt.Dir)
+	}
 
-        log.Debugw("scanner.Scan done.", "updates", updates)
+	log.Debugw("scanner.Scan done.", "updates", updates)
 
 	cfg := yaml.Node{}
 	err = yaml.Unmarshal(dependabotCfgFileContent, &cfg)
@@ -70,11 +70,11 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 		return Trace(err, "Failed to prase %s", opt.File)
 	}
 
-        modifier := modifier.New()
-        err = modifier.Modify(&cfg, updates)
-        if err != nil {
-                return Trace(err, "Failed to generate new dependabot.yml")
-        }
+	modifier := modifier.New()
+	err = modifier.Modify(&cfg, updates)
+	if err != nil {
+		return Trace(err, "Failed to generate new dependabot.yml")
+	}
 
 	newCfgContent, err := yaml.Marshal(&cfg)
 	if err != nil {
