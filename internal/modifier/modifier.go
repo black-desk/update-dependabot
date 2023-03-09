@@ -61,7 +61,7 @@ type update struct {
 	PackageEcosystem string `yaml:"package-ecosystem"`
 
 	Schedule struct {
-		Interval string `yaml:"internal"`
+		Interval string `yaml:"interval"`
 	} `yaml:"schedule"`
 }
 
@@ -116,7 +116,7 @@ func (m *Modifier) modifyUpdates(updatesNode *yaml.Node, updates []types.Update)
 			Directory:        updates[i].Directory,
 			PackageEcosystem: updates[i].PackageEcosystem.String(),
 			Schedule: struct {
-				Interval string `yaml:"internal"`
+				Interval string `yaml:"interval"`
 			}{
 				Interval: "daily",
 			},
