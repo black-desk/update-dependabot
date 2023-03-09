@@ -101,6 +101,8 @@ func (m *Modifier) modifyUpdates(updatesNode *yaml.Node, updates []types.Update)
 
 				found = true
 
+				log.Debugw("Already exists", "update", update)
+
 				updates = append(updates[:j], updates[j+1:]...)
 			}
 		}
