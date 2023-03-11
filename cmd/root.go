@@ -84,6 +84,15 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 		return Trace(err, "Failed to write new dependabot.yml to stdout")
 	}
 
+	err = os.MkdirAll(filepath.Dir(opt.File), 0755)
+	if err != nil {
+		return Trace(err, "Failed to create \"%s\"", filepath.Dir(opt.File))
+	}
+
 	err = os.WriteFile(opt.File, newCfgContent, 0644)
-	return Trace(err, "Failed to write %s", opt.File)
+	if err != nil {
+		return Trace(err, "Failed to write %s", opt.File)
+	}
+
+        return
 }
