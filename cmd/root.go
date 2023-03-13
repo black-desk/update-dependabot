@@ -73,6 +73,10 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 		return Trace(err, "Failed to generate new dependabot.yml")
 	}
 
+	if cfg.IsZero() {
+		return
+	}
+
 	newCfgContent, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return Trace(err, "Failed to marshal new dependabot.yml")
