@@ -22,6 +22,10 @@ func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
 		return
 	}
 
+	if updates == nil || len(updates) == 0 {
+		return
+	}
+
 	for i := range cfg.Content[0].Content {
 		if cfg.Content[0].Content[i].Value == "updates" {
 			err = Trace(m.modifyUpdates(cfg.Content[0].Content[i+1], updates))
@@ -55,10 +59,9 @@ func (m *Modifier) initCfg(cfg *yaml.Node, updates []types.Update) (err error) {
 	}
 
 	err = yaml.Unmarshal([]byte(`
-                        version: 2
-                        updates: []
-                `), cfg)
-
+                version: 2
+                updates: []
+        `), cfg)
 	if err != nil {
 		err = Trace(err)
 		return
