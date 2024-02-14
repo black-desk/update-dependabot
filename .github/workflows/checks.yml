@@ -6,4 +6,33 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     steps:
-      - uses: black-desk/checks@v1
+      - uses: black-desk/checks@master
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: true
+          cache-dependency-path: ${{github.workspace}}/go.sum
+
+      - name: Build & test (debug mode)
+        run: |
+          go build -v --tags=debug &&
+          go test -v --tags=debug ./...
+
+      - name: Build & test
+        run: |
+          go build -v &&
+          go test -v ./...
+
+  pass:
+    name: Pass
+    needs: [checks, build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder
+        run: |
+          true
