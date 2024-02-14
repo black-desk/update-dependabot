@@ -138,6 +138,7 @@ func (m *Modifier) modifyUpdates(
 				updatesNode.Content[:i],
 				updatesNode.Content[i+1:]...,
 			)
+			i--
 		}
 	}
 
