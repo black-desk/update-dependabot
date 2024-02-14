@@ -21,12 +21,13 @@ func New() *Scanner {
 }
 
 func (s *Scanner) Scan(dir string) (updates []types.Update, err error) {
-	defer Wrap(&err,"scan dir %s", dir)
+	defer Wrap(&err, "scan dir %s", dir)
 
 	scanFns := [](func(string) ([]types.Update, error)){
 		s.scanGitSubmodule,
 		s.scanGithubActions,
 		s.scanGoModules,
+		s.scanNPM,
 	}
 
 	for i := range scanFns {
@@ -143,6 +144,48 @@ func (s *Scanner) scanGoModules(
 						filepath.Dir(path), root,
 					)),
 				PackageEcosystem: types.PackageEcosystemGoModules,
+			})
+		}
+
+		return
+	}); err != nil {
+		Wrap(&err, "walk directory.")
+		return
+	}
+
+	return
+}
+
+func (s *Scanner) scanNPM(
+	root string,
+) (
+	updates []types.Update, err error,
+) {
+	defer Wrap(&err)
+
+	if err = filepath.WalkDir(root, func(
+		path string, f fs.DirEntry, walkDirErr error,
+	) (err error) {
+		if walkDirErr != nil {
+			if path == root {
+				err = walkDirErr
+				return
+			}
+			return
+		}
+
+		if f.IsDir() && f.Name() == "node_modules" {
+			return filepath.SkipDir
+		}
+
+		name := f.Name()
+		if name == "package.json" {
+			updates = append(updates, types.Update{
+				Directory: filepath.Clean(
+					"/" + strings.TrimPrefix(
+						filepath.Dir(path), root,
+					)),
+				PackageEcosystem: types.PackageEcosystemNpm,
 			})
 		}
 
