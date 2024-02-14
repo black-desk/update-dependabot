@@ -18,7 +18,7 @@ Support
 - [x] gomod
 - [ ] gradle
 - [ ] maven
-- [ ] npm
+- [x] npm
 - [ ] nuget
 - [ ] pip
 - [ ] pub
