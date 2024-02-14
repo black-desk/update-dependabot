@@ -17,8 +17,8 @@ func New() *Modifier {
 }
 
 func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
-	err = Trace(m.initCfg(cfg, updates))
-	if err != nil {
+	defer Wrap(&err, "modify yaml")
+	if err = m.initCfg(cfg, updates); err != nil {
 		return
 	}
 
@@ -27,26 +27,33 @@ func (m *Modifier) Modify(cfg *yaml.Node, updates []types.Update) (err error) {
 	}
 
 	for i := range cfg.Content[0].Content {
-		if cfg.Content[0].Content[i].Value == "updates" {
-			err = Trace(m.modifyUpdates(cfg.Content[0].Content[i+1], updates))
-			if err != nil {
-				return
-			}
-			break
+		if cfg.Content[0].Content[i].Value != "updates" {
+			continue
 		}
+
+		if err = m.modifyUpdates(
+			cfg.Content[0].Content[i+1], updates,
+		); err != nil {
+			return
+		}
+		break
 	}
 
 	return
 }
 
 func (m *Modifier) initCfg(cfg *yaml.Node, updates []types.Update) (err error) {
+	defer Wrap(&err)
+
 	found := false
 
 	if cfg != nil && len(cfg.Content) != 0 {
 		for i := range cfg.Content[0].Content {
-			if cfg.Content[0].Content[i].Value == "updates" {
-				found = true
+			if cfg.Content[0].Content[i].Value != "updates" {
+				continue
 			}
+			found = true
+			break
 		}
 	}
 
@@ -58,12 +65,9 @@ func (m *Modifier) initCfg(cfg *yaml.Node, updates []types.Update) (err error) {
 		return
 	}
 
-	err = yaml.Unmarshal([]byte(`
-                version: 2
-                updates: []
-        `), cfg)
-	if err != nil {
-		err = Trace(err)
+	if err = yaml.Unmarshal(
+		[]byte("version: 2\nupdates: []"), cfg,
+	); err != nil {
 		return
 	}
 
@@ -82,16 +86,15 @@ type update struct {
 }
 
 func (u *update) node() (node *yaml.Node, err error) {
-	buf, err := yaml.Marshal(u)
-	if err != nil {
-		err = Trace(err)
+	defer Wrap(&err)
+
+	var buf []byte
+	if buf, err = yaml.Marshal(u); err != nil {
 		return
 	}
 
 	node = &yaml.Node{}
-	err = yaml.Unmarshal(buf, node)
-	if err != nil {
-		err = Trace(err)
+	if err = yaml.Unmarshal(buf, node); err != nil {
 		return
 	}
 
@@ -100,32 +103,41 @@ func (u *update) node() (node *yaml.Node, err error) {
 	return
 }
 
-func (m *Modifier) modifyUpdates(updatesNode *yaml.Node, updates []types.Update) (err error) {
+func (m *Modifier) modifyUpdates(
+	updatesNode *yaml.Node, updates []types.Update,
+) (
+	err error,
+) {
 	for i := 0; i < len(updatesNode.Content); i++ {
 		found := false
 		updateNode := updatesNode.Content[i]
 
 		var update update
-		err = Trace(updateNode.Decode(&update))
-		if err != nil {
+		if err = updateNode.Decode(&update); err != nil {
 			return
 		}
 
 		for j := 0; j < len(updates); j++ {
-			if updates[j].Directory == update.Directory &&
-				updates[j].PackageEcosystem.String() == update.PackageEcosystem {
-
-				found = true
-
-				log.Debugw("Already exists", "update", update)
-
-				updates = append(updates[:j], updates[j+1:]...)
+			if updates[j].Directory != update.Directory {
+				continue
 			}
+
+			if updates[j].PackageEcosystem.String() !=
+				update.PackageEcosystem {
+				continue
+			}
+
+			found = true
+			log.Debugw("Already exists", "update", update)
+			updates = append(updates[:j], updates[j+1:]...)
 		}
 
 		if !found {
 			log.Debugw("Remove", "update", update)
-			updatesNode.Content = append(updatesNode.Content[:i], updatesNode.Content[i+1:]...)
+			updatesNode.Content = append(
+				updatesNode.Content[:i],
+				updatesNode.Content[i+1:]...,
+			)
 		}
 	}
 
@@ -140,9 +152,8 @@ func (m *Modifier) modifyUpdates(updatesNode *yaml.Node, updates []types.Update)
 			},
 		}
 
-		node, nodeErr := update.node()
-		if nodeErr != nil {
-			err = Trace(nodeErr)
+		var node *yaml.Node
+		if node, err = update.node(); err != nil {
 			return
 		}
 

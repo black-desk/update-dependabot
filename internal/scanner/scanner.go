@@ -20,7 +20,8 @@ func New() *Scanner {
 	return nil
 }
 
-func (s *Scanner) Scan(root string) (updates []types.Update, err error) {
+func (s *Scanner) Scan(dir string) (updates []types.Update, err error) {
+	defer Wrap(&err,"scan dir %s", dir)
 
 	scanFns := [](func(string) ([]types.Update, error)){
 		s.scanGitSubmodule,
@@ -29,9 +30,10 @@ func (s *Scanner) Scan(root string) (updates []types.Update, err error) {
 	}
 
 	for i := range scanFns {
-		pendingUpdates, scanFnErr := scanFns[i](root)
+		pendingUpdates, scanFnErr := scanFns[i](dir)
 		if scanFnErr != nil {
-			err = Trace(scanFnErr, "Failed to scan in %s", root)
+			err = scanFnErr
+			Wrap(&err, "Failed to scan in %s", dir)
 			return
 		}
 		updates = append(updates, pendingUpdates...)
@@ -40,38 +42,41 @@ func (s *Scanner) Scan(root string) (updates []types.Update, err error) {
 	return
 }
 
-func (s *Scanner) pushd(root string, fn func()) (err error) {
-	pwd, err := os.Getwd()
+func (s *Scanner) workInDir(dir string, fn func()) (err error) {
+	defer Wrap(&err, "work in dir %s", dir)
+
+	var pwd string
+	pwd, err = os.Getwd()
 	if err != nil {
-		err = Trace(err, "Failed to get working dir")
+		Wrap(&err, "get working dir")
 		return
 	}
 
-	err = os.Chdir(root)
+	err = os.Chdir(dir)
 	if err != nil {
-		err = Trace(err, "Failed to chdir to %s", root)
+		Wrap(&err, "chdir to %s", dir)
 		return
 	}
 
 	fn()
 
-	defer func() {
-		popdErr := os.Chdir(pwd)
-		if popdErr != nil {
-			if err != nil {
-				log.Warn("Failed to chdir back to %s", pwd)
-			}
-			err = popdErr
-		}
-	}()
-	return
+	err = os.Chdir(pwd)
+	if err != nil {
+		Wrap(&err, "chdir back to %s", pwd)
+		return
+	}
 
+	return
 }
 
-func (s *Scanner) scanGitSubmodule(root string) (updates []types.Update, err error) {
+func (s *Scanner) scanGitSubmodule(
+	dir string,
+) (
+	updates []types.Update, err error,
+) {
+	defer Wrap(&err)
 
-	err = Trace(s.pushd(root, func() {
-
+	if err = s.workInDir(dir, func() {
 		_, statErr := os.Stat(".gitmodules")
 		if os.IsNotExist(statErr) {
 			return
@@ -81,16 +86,21 @@ func (s *Scanner) scanGitSubmodule(root string) (updates []types.Update, err err
 			Directory:        "/",
 			PackageEcosystem: types.PackageEcosystemGitSubmodule,
 		}}
-
-	}))
+	}); err != nil {
+		return
+	}
 
 	return
 }
 
-func (s *Scanner) scanGithubActions(root string) (updates []types.Update, err error) {
+func (s *Scanner) scanGithubActions(
+	dir string,
+) (
+	updates []types.Update, err error,
+) {
+	defer Wrap(&err)
 
-	err = Trace(s.pushd(root, func() {
-
+	if err = s.workInDir(dir, func() {
 		_, statErr := os.Stat(filepath.Join(".github", "workflows"))
 		if os.IsNotExist(statErr) {
 			return
@@ -100,36 +110,47 @@ func (s *Scanner) scanGithubActions(root string) (updates []types.Update, err er
 			Directory:        "/",
 			PackageEcosystem: types.PackageEcosystemGitHubActions,
 		}}
-
-	}))
+	}); err != nil {
+		return
+	}
 
 	return
 }
 
-func (s *Scanner) scanGoModules(root string) (updates []types.Update, err error) {
+func (s *Scanner) scanGoModules(
+	root string,
+) (
+	updates []types.Update, err error,
+) {
+	defer Wrap(&err)
 
-	err = filepath.WalkDir(root, func(path string, f fs.DirEntry, err error) error {
-		if err != nil {
+	if err = filepath.WalkDir(root, func(
+		path string, f fs.DirEntry, walkDirErr error,
+	) (err error) {
+		if walkDirErr != nil {
 			if path == root {
-				return Trace(err)
+				err = walkDirErr
+				return
 			}
-			return nil
+			return
 		}
 
 		name := f.Name()
 		if name == "go.mod" {
 			updates = append(updates, types.Update{
-				Directory:        filepath.Clean("/" + strings.TrimPrefix(filepath.Dir(path), root)),
+				Directory: filepath.Clean(
+					"/" + strings.TrimPrefix(
+						filepath.Dir(path), root,
+					)),
 				PackageEcosystem: types.PackageEcosystemGoModules,
 			})
 		}
 
-		return nil
-	})
-
-	if err != nil {
-		err = Trace(err, "Failed to walk directory.")
+		return
+	}); err != nil {
+		Wrap(&err, "walk directory.")
 		return
 	}
+
 	return
 }

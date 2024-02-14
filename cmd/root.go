@@ -43,6 +43,7 @@ var rootCmd = &cobra.Command{
 }
 
 func cmdRoot(opt types.CmdOpt) (err error) {
+	defer Wrap(&err)
 
 	if !filepath.IsAbs(opt.File) {
 		opt.File = filepath.Join(opt.Dir, opt.File)
@@ -50,13 +51,15 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 
 	dependabotCfgFileContent, err := os.ReadFile(opt.File)
 	if err != nil && !os.IsNotExist(err) {
-		return Trace(err, "Failed to read %s", opt.File)
+		Wrap(&err, "read %s", opt.File)
+		return
 	}
 
 	scanner := scanner.New()
 	updates, err := scanner.Scan(opt.Dir)
 	if err != nil {
-		return Trace(err, "Failed to scan %s", opt.Dir)
+		Wrap(&err, "scan %s", opt.Dir)
+		return
 	}
 
 	log.Debugw("scanner.Scan done.", "updates", updates)
@@ -64,13 +67,14 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 	cfg := yaml.Node{}
 	err = yaml.Unmarshal(dependabotCfgFileContent, &cfg)
 	if err != nil {
-		return Trace(err, "Failed to prase %s", opt.File)
+		Wrap(&err, "prase %s", opt.File)
+		return
 	}
 
 	modifier := modifier.New()
 	err = modifier.Modify(&cfg, updates)
 	if err != nil {
-		return Trace(err, "Failed to generate new dependabot.yml")
+		return err
 	}
 
 	if cfg.IsZero() {
@@ -79,24 +83,29 @@ func cmdRoot(opt types.CmdOpt) (err error) {
 
 	newCfgContent, err := yaml.Marshal(&cfg)
 	if err != nil {
-		return Trace(err, "Failed to marshal new dependabot.yml")
+		Wrap(&err, "marshal new dependabot.yml")
+		return
 	}
 
 	if opt.DryRun {
 		reader := bytes.NewReader(newCfgContent)
-		_, err := io.Copy(os.Stdout, reader)
-		return Trace(err, "Failed to write new dependabot.yml to stdout")
+		_, err = io.Copy(os.Stdout, reader)
+		Wrap(&err, "write new dependabot.yml to stdout")
+		return
 	}
 
-	err = os.MkdirAll(filepath.Dir(opt.File), 0755)
+	dir := filepath.Dir(opt.File)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
-		return Trace(err, "Failed to create \"%s\"", filepath.Dir(opt.File))
+		Wrap(&err, "create %s", dir)
+		return
 	}
 
 	err = os.WriteFile(opt.File, newCfgContent, 0644)
 	if err != nil {
-		return Trace(err, "Failed to write %s", opt.File)
+		Wrap(&err, "write %s", opt.File)
+		return
 	}
 
-        return
+	return
 }
