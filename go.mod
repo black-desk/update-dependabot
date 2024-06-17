@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/black-desk/lib/go v0.0.0-20240122101039-99a6323db5de
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
